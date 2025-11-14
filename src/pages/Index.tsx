@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -19,11 +19,30 @@ const Index = () => {
   const [selectedBirthday, setSelectedBirthday] = useState<Birthday | null>(null);
   const [showCelebration, setShowCelebration] = useState(false);
   const [celebrationName, setCelebrationName] = useState('');
+  const [isMusicPlaying, setIsMusicPlaying] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const { toast } = useToast();
 
   const [newBirthdayName, setNewBirthdayName] = useState('');
   const [newBirthdayDate, setNewBirthdayDate] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const celebrationAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    audioRef.current = new Audio('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3');
+    audioRef.current.loop = true;
+    audioRef.current.volume = 0.3;
+
+    celebrationAudioRef.current = new Audio('https://www.soundjay.com/misc/sounds/bell-ringing-05.mp3');
+    celebrationAudioRef.current.volume = 0.5;
+
+    return () => {
+      audioRef.current?.pause();
+      celebrationAudioRef.current?.pause();
+    };
+  }, []);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -48,6 +67,7 @@ const Index = () => {
       ) {
         setCelebrationName(selectedBirthday.name);
         setShowCelebration(true);
+        celebrationAudioRef.current?.play();
         setTimeout(() => setShowCelebration(false), 10000);
       }
     }
@@ -112,31 +132,64 @@ const Index = () => {
     }
   };
 
+  const toggleMusic = () => {
+    if (isMusicPlaying) {
+      audioRef.current?.pause();
+    } else {
+      audioRef.current?.play();
+    }
+    setIsMusicPlaying(!isMusicPlaying);
+  };
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen();
+      setIsFullscreen(true);
+    } else {
+      document.exitFullscreen();
+      setIsFullscreen(false);
+    }
+  };
+
   const time = formatTime(currentTime);
   const timeLeft = selectedBirthday ? calculateTimeLeft(selectedBirthday.date) : null;
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col relative overflow-hidden">
       {showCelebration && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black">
-          <div className="text-center animate-fade-in">
-            <h1 className="text-6xl md:text-9xl font-bold mb-8 animate-scale-in" style={{ fontFamily: 'Montserrat, sans-serif' }}>
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-purple-900 via-pink-800 to-red-900 animate-fade-in">
+          <div className="text-center">
+            <h1 className="text-6xl md:text-9xl font-bold mb-8 animate-scale-in celebration-glow" style={{ fontFamily: 'Montserrat, sans-serif' }}>
               🎉 С Днём рождения! 🎉
             </h1>
-            <h2 className="text-4xl md:text-7xl font-semibold animate-fade-in" style={{ fontFamily: 'Montserrat, sans-serif' }}>
+            <h2 className="text-4xl md:text-7xl font-semibold animate-fade-in celebration-text" style={{ fontFamily: 'Montserrat, sans-serif' }}>
               {celebrationName}
             </h2>
             <div className="confetti-container">
-              {[...Array(50)].map((_, i) => (
+              {[...Array(100)].map((_, i) => (
                 <div
                   key={i}
                   className="confetti"
                   style={{
                     left: `${Math.random() * 100}%`,
                     animationDelay: `${Math.random() * 3}s`,
-                    backgroundColor: ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff'][
-                      Math.floor(Math.random() * 6)
+                    animationDuration: `${2 + Math.random() * 3}s`,
+                    backgroundColor: ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff', '#ff6b6b', '#4ecdc4'][
+                      Math.floor(Math.random() * 8)
                     ],
+                  }}
+                />
+              ))}
+            </div>
+            <div className="fireworks-container">
+              {[...Array(10)].map((_, i) => (
+                <div
+                  key={i}
+                  className="firework"
+                  style={{
+                    left: `${10 + Math.random() * 80}%`,
+                    top: `${10 + Math.random() * 60}%`,
+                    animationDelay: `${Math.random() * 2}s`,
                   }}
                 />
               ))}
@@ -162,6 +215,25 @@ const Index = () => {
           className={activeCategory === 'birthday' ? 'bg-white text-black hover:bg-gray-200' : 'border-white text-white hover:bg-white hover:text-black'}
         >
           Дни рождения
+        </Button>
+      </div>
+
+      <div className="absolute top-6 right-6 flex gap-4 z-10">
+        <Button
+          variant="outline"
+          onClick={toggleMusic}
+          className="border-white text-white hover:bg-white hover:text-black"
+          title={isMusicPlaying ? 'Выключить музыку' : 'Включить музыку'}
+        >
+          <Icon name={isMusicPlaying ? 'Volume2' : 'VolumeX'} size={20} />
+        </Button>
+        <Button
+          variant="outline"
+          onClick={toggleFullscreen}
+          className="border-white text-white hover:bg-white hover:text-black"
+          title={isFullscreen ? 'Выйти из полноэкранного режима' : 'Полноэкранный режим'}
+        >
+          <Icon name={isFullscreen ? 'Minimize2' : 'Maximize2'} size={20} />
         </Button>
       </div>
 
@@ -195,11 +267,11 @@ const Index = () => {
                 <Button
                   variant="ghost"
                   onClick={() => setSelectedBirthday(null)}
-                  className="absolute top-6 right-6 text-white hover:bg-white hover:text-black"
+                  className="absolute top-6 right-32 text-white hover:bg-white hover:text-black"
                 >
                   <Icon name="X" size={24} />
                 </Button>
-                <h2 className="text-3xl md:text-5xl mb-4 font-light" style={{ fontFamily: 'Montserrat, sans-serif' }}>
+                <h2 className="text-3xl md:text-5xl mb-4 font-light text-white" style={{ fontFamily: 'Montserrat, sans-serif' }}>
                   День рождения
                 </h2>
                 <h3 className="text-4xl md:text-6xl mb-12 font-semibold" style={{ fontFamily: 'Montserrat, sans-serif' }}>
@@ -245,17 +317,17 @@ const Index = () => {
                       </DialogHeader>
                       <div className="space-y-4">
                         <div>
-                          <Label htmlFor="name">Имя</Label>
+                          <Label htmlFor="name" className="text-white">Имя</Label>
                           <Input
                             id="name"
                             value={newBirthdayName}
                             onChange={(e) => setNewBirthdayName(e.target.value)}
                             placeholder="Введите имя"
-                            className="bg-black border-white text-white"
+                            className="bg-black border-white text-white placeholder:text-gray-500"
                           />
                         </div>
                         <div>
-                          <Label htmlFor="date">Дата</Label>
+                          <Label htmlFor="date" className="text-white">Дата</Label>
                           <Input
                             id="date"
                             type="datetime-local"
@@ -332,12 +404,74 @@ const Index = () => {
           width: 10px;
           height: 10px;
           top: -10px;
-          animation: confetti-fall 3s linear infinite;
+          animation: confetti-fall linear infinite;
         }
 
         @keyframes confetti-fall {
           to {
-            transform: translateY(100vh) rotate(360deg);
+            transform: translateY(110vh) rotate(720deg);
+          }
+        }
+
+        .fireworks-container {
+          position: absolute;
+          width: 100%;
+          height: 100%;
+          overflow: hidden;
+          pointer-events: none;
+        }
+
+        .firework {
+          position: absolute;
+          width: 4px;
+          height: 4px;
+          border-radius: 50%;
+          box-shadow: 
+            0 0 20px 10px #ff0,
+            0 0 40px 20px #f0f,
+            0 0 60px 30px #0ff;
+          animation: firework-explosion 2s ease-out infinite;
+        }
+
+        @keyframes firework-explosion {
+          0% {
+            transform: scale(0);
+            opacity: 1;
+          }
+          50% {
+            opacity: 1;
+          }
+          100% {
+            transform: scale(30);
+            opacity: 0;
+          }
+        }
+
+        .celebration-glow {
+          text-shadow: 
+            0 0 20px rgba(255, 255, 255, 0.8),
+            0 0 40px rgba(255, 255, 255, 0.6),
+            0 0 60px rgba(255, 255, 255, 0.4);
+          animation: glow-pulse 1.5s ease-in-out infinite;
+        }
+
+        .celebration-text {
+          text-shadow: 
+            0 0 10px rgba(255, 255, 255, 0.8);
+        }
+
+        @keyframes glow-pulse {
+          0%, 100% {
+            text-shadow: 
+              0 0 20px rgba(255, 255, 255, 0.8),
+              0 0 40px rgba(255, 255, 255, 0.6),
+              0 0 60px rgba(255, 255, 255, 0.4);
+          }
+          50% {
+            text-shadow: 
+              0 0 30px rgba(255, 255, 255, 1),
+              0 0 60px rgba(255, 255, 255, 0.8),
+              0 0 90px rgba(255, 255, 255, 0.6);
           }
         }
       `}</style>
